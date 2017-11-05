@@ -28,6 +28,32 @@ public:
 };
 
 template<>
+class Metadata<uint64_t>{
+public:
+  Lcp lcp;
+  uint64_t cache;
+
+  Metadata() {};
+  Metadata(unsigned char *s, Lcp l)
+  {
+    uint64_t c = *( uint64_t *) (s + l);
+
+    uint64_t zero_mask = (c - 0x0101010101010101) & ~c & 0x8080808080808080;
+
+    uint64_t string_mask = zero_mask ^ (zero_mask - 1);
+
+    cache = __builtin_bswap64(c & string_mask);
+
+    lcp = l + 8;
+  };
+
+  bool cache_gt( Metadata<uint64_t> x ) { return cache > x.cache ; };
+
+  bool nonterminal() { return cache & 0xFF; };
+
+};
+
+template<>
 class Metadata<void>{
 public:
   Lcp lcp;
@@ -38,7 +64,7 @@ public:
 };
 
 template<bool SSE>
-Lcp strlcp( unsigned char *s, unsigned char *t, Lcp rlcp );
+static Lcp strlcp( unsigned char *s, unsigned char *t, Lcp rlcp );
 
 template<>
 Lcp strlcp<true>(  unsigned char *s, unsigned char *t, Lcp rlcp ) {
@@ -66,7 +92,7 @@ Lcp strlcp<false>( unsigned char *s, unsigned char *t, Lcp i ) {
 }
 
 template<class CacheType>
-void exch( unsigned char *strings[], Metadata<CacheType> meta[], int I, int J) {
+static void exch( unsigned char *strings[], Metadata<CacheType> meta[], int I, int J) {
   std::swap(strings[I],strings[J]);
   std::swap(meta[I], meta[J]);
 }
